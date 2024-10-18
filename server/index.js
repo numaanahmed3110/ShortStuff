@@ -13,7 +13,7 @@ main().catch((err) => console.log(err));
 
 async function main() {
   try {
-    await mongoose.connect("mongodb://localhost:27017/shawty");
+    await mongoose.connect("mongodb+srv://admin:salma3110@cluster0.p2kdi.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0");
     console.log("Connected to MongoDB");
   } catch (err) {
     console.error("Error connecting to MongoDB:", err);
