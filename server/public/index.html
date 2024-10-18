@@ -3,12 +3,61 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ShortStuff</title>
-    <link rel="stylesheet" href="style.css" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>URL Shortener</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f0f0f0;
+        padding: 50px;
+      }
+      form,
+      #result {
+        background-color: white;
+        padding: 20px;
+        border-radius: 5px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        max-width: 500px;
+        margin: 20px auto;
+      }
+      label,
+      input {
+        display: block;
+        margin: 10px 0;
+      }
+      input {
+        width: 100%;
+        padding: 5px;
+        box-sizing: border-box;
+      }
+      button {
+        padding: 10px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+      #result {
+        word-break: break-all;
+      }
+    </style>
   </head>
   <body>
-    <header>
-      <h1>ShortStuff --making long links little..</h1>
-    </header>
+    <h1>SHAWTY -make loong links shorter</h1>
+
+    <form id="urlForm">
+      <label for="url">Enter URL:</label>
+      <input type="text" id="url" name="url" placeholder="Enter URL" required />
+      <label for="slug">Custom Slug (optional):</label>
+      <input type="text" id="slug" name="slug" placeholder="Custom Slug" />
+      <button type="submit">Shorten</button>
+    </form>
+    <div id="result"></div>
+
+    <script src="app.js"></script>
   </body>
 </html>
