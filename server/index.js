@@ -28,8 +28,16 @@ const urlSchema = new mongoose.Schema({
 
 const Url = mongoose.model("Url", urlSchema);
 
-app.use(helmet());
-app.use(morgan("tiny"));
+app.use(
+  helmet.contentSecurityPolicy({
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "https://vercel.live"],
+      fontSrc: ["'self'", "https://shawty-six.vercel.app"],
+      styleSrc: ["'self'", "https://shawty-six.vercel.app"]
+    },
+  })
+);app.use(morgan("tiny"));
 app.use(cors());
 app.use(express.json());
 app.use(express.static("./public"));
