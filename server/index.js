@@ -32,11 +32,13 @@ app.use(
   helmet.contentSecurityPolicy({
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "https://vercel.live"],
-      fontSrc: ["'self'", "https://shawty-six.vercel.app"],
-      styleSrc: ["'self'", "https://shawty-six.vercel.app"]
+      scriptSrc: ["'self'", "https://vercel.live", "'unsafe-inline'"],
+      fontSrc: ["'self'", "https:", "data:"],
+      styleSrc: ["'self'", "https:", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
     },
   })
+);
 );app.use(morgan("tiny"));
 app.use(cors());
 app.use(express.json());
