@@ -5,8 +5,13 @@ import helmet from "helmet";
 import * as yup from "yup";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
 
 const app = express();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 dotenv.config();
 main().catch((err) => console.log(err));
@@ -30,15 +35,15 @@ const urlSchema = new mongoose.Schema({
 });
 
 const Url = mongoose.model("Url", urlSchema);
-
 app.use(
   helmet.contentSecurityPolicy({
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "https://vercel.live", "'unsafe-inline'"],
-      fontSrc: ["'self'", "https:", "data:"],
-      styleSrc: ["'self'", "https:", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "https:"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://vercel.live"],
+      fontSrc: ["'self'", "https://shawty-six.vercel.app", "data:"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://shawty-six.vercel.app"],
+      imgSrc: ["'self'", "data:"],
+      connectSrc: ["'self'", "https://vercel.live"],
     },
   })
 );
@@ -46,12 +51,12 @@ app.use(
 app.use(morgan("tiny"));
 app.use(cors());
 app.use(express.json());
-app.use(express.static("./public"));
+app.use(express.static(join(__dirname, "public")));
 app.use((req, res, next) => {
   res.setHeader("Content-Security-Policy", "script-src 'self' 'unsafe-eval';");
   next();
 });
-
+app.get("/favicon.ico", (req, res) => res.status(204).end());
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
