@@ -10,6 +10,7 @@ const app = express();
 
 dotenv.config();
 main().catch((err) => console.log(err));
+app.get("/favicon.ico", (req, res) => res.status(204));
 
 async function main() {
   try {
@@ -28,7 +29,17 @@ const urlSchema = new mongoose.Schema({
 
 const Url = mongoose.model("Url", urlSchema);
 
-app.use(helmet());
+app.use(
+  helmet.contentSecurityPolicy({
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "https://vercel.live"],
+      fontSrc: ["'self'", "https://shawty-six.vercel.app"],
+      styleSrc: ["'self'", "https://shawty-six.vercel.app"],
+      imgSrc: ["'none'"], // This will prevent favicon requests
+    },
+  })
+);
 app.use(morgan("tiny"));
 app.use(cors());
 app.use(express.json());
