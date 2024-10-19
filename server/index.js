@@ -35,16 +35,6 @@ app.use(
   helmet.contentSecurityPolicy({
     directives: {
       defaultSrc: ["'self'"],
-      // <<<<<<< HEAD
-      //       scriptSrc: ["'self'", "https://vercel.live"],
-      //       fontSrc: ["'self'", "https://shawty-six.vercel.app"],
-      //       styleSrc: ["'self'", "https://shawty-six.vercel.app"],
-      //       imgSrc: ["'none'"], // This will prevent favicon requests
-      //     },
-      //   })
-      // );
-      // app.use(morgan("tiny"));
-      // =======
       scriptSrc: ["'self'", "https://vercel.live", "'unsafe-inline'"],
       fontSrc: ["'self'", "https:", "data:"],
       styleSrc: ["'self'", "https:", "'unsafe-inline'"],
@@ -54,13 +44,16 @@ app.use(
 );
 
 app.use(morgan("tiny"));
-// >>>>>>> 2289db7dbb502e4f3d11e7023c4b1194b96d600b
 app.use(cors());
 app.use(express.json());
 app.use(express.static("./public"));
 app.use((req, res, next) => {
   res.setHeader("Content-Security-Policy", "script-src 'self' 'unsafe-eval';");
   next();
+});
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 app.get("/url/:id", async (req, res) => {
