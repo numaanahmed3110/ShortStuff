@@ -13,167 +13,98 @@ const router = express.Router();
 
 dotenv.config();
 
-// CORS configuration - must be first
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "https://shawty3110.vercel.app");
-  res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.header("Access-Control-Allow-Credentials", "true");
+// Configure Helmet with appropriate CSP
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "vercel.live"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "https:"],
+        fontSrc: ["'self'", "https:", "data:"],
+        connectSrc: ["'self'", "https://shawty3110.vercel.app"],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
 
-  // Handle preflight
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
-  next();
-});
+// CORS configuration
+app.use(
+  cors({
+    origin: "https://shawty3110.vercel.app",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  })
+);
 
-// Middleware
-app.use(express.json());
+// Basic middleware
 app.use(morgan("dev"));
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// MongoDB connection with retry logic
-const connectWithRetry = async () => {
-  try {
-    await mongoose.connect(process.env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
-    console.log("MongoDB connected successfully");
-  } catch (err) {
-    console.error("MongoDB connection error:", err);
-    console.log("Retrying in 5 seconds...");
-    setTimeout(connectWithRetry, 5000);
-  }
-};
+// Serve static files
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+app.use(express.static(join(__dirname, "public")));
+app.use(express.static(join(__dirname, "build")));
 
-connectWithRetry();
+// MongoDB connection
+mongoose
+  .connect(process.env.MONGODB_URI)
+  .then(() => console.log("Connected to MongoDB"))
+  .catch((err) => console.error("MongoDB connection error:", err));
 
-// Schema definition
+// URL Schema
 const urlSchema = new mongoose.Schema({
-  slug: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true,
-    index: true,
-  },
-  url: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  clicks: {
-    type: Number,
-    default: 0,
-  },
-  active: {
-    type: Boolean,
-    default: true,
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
+  slug: { type: String, required: true, unique: true },
+  url: { type: String, required: true },
+  clicks: { type: Number, default: 0 },
+  active: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now },
 });
 
 const Url = mongoose.model("Url", urlSchema);
 
-// URL Shortening endpoint
+// API Routes
 router.post("/shorten", async (req, res) => {
-  console.log("Received shortening request:", req.body);
-
   try {
     let { url, slug } = req.body;
 
-    // Validate URL
-    if (!url) {
-      return res.status(400).json({ error: "URL is required" });
-    }
-
-    // Add http:// if protocol is missing
-    if (!url.startsWith("http://") && !url.startsWith("https://")) {
-      url = "http://" + url;
-    }
-
-    // Validate and sanitize slug
-    if (slug) {
-      // Check if slug is already taken
-      const existingUrl = await Url.findOne({ slug });
-      if (existingUrl) {
-        return res
-          .status(400)
-          .json({ error: "This custom URL is already in use" });
-      }
-
-      // Sanitize slug
-      slug = slug
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-zA-Z0-9-]/g, "");
-    } else {
-      // Generate random slug
+    if (!slug) {
       slug = nanoid(7);
     }
 
-    // Prevent shortening of internal links
-    if (url.includes("shawty3110.vercel.app")) {
-      return res
-        .status(400)
-        .json({ error: "Cannot shorten URLs from this domain" });
-    }
+    const newUrl = new Url({ url, slug });
+    await newUrl.save();
 
-    // Create new URL document
-    const newUrl = new Url({
-      url,
-      slug,
-      clicks: 0,
-      active: true,
-    });
-
-    // Save to database
-    const savedUrl = await newUrl.save();
-
-    console.log("Successfully shortened URL:", savedUrl);
-
-    res.status(201).json({
-      slug: savedUrl.slug,
-      originalUrl: savedUrl.url,
-      shortUrl: `${req.protocol}://${req.get("host")}/${savedUrl.slug}`,
-      clicks: savedUrl.clicks,
-      active: savedUrl.active,
-      createdAt: savedUrl.createdAt,
-    });
+    res.json(newUrl);
   } catch (error) {
     console.error("Error shortening URL:", error);
-    res.status(500).json({
-      error: "Failed to shorten URL",
-      details: error.message,
-    });
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Get all URLs endpoint
 router.get("/urls", async (req, res) => {
-  console.log("Received request for /api/urls");
   try {
     const urls = await Url.find().sort({ createdAt: -1 });
-    console.log(`Found ${urls.length} URLs`);
-    return res.status(200).json(urls);
+    res.json(urls);
   } catch (error) {
     console.error("Error fetching URLs:", error);
-    return res.status(500).json({
-      error: true,
-      message: "Failed to fetch URLs",
-      details: error.message,
-    });
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Redirect endpoint
+// Mount API routes
+app.use("/api", router);
+
+// Redirect route for shortened URLs
 app.get("/:slug", async (req, res) => {
-  const { slug } = req.params;
   try {
+    const { slug } = req.params;
     const url = await Url.findOneAndUpdate(
       { slug },
       { $inc: { clicks: 1 } },
@@ -183,20 +114,33 @@ app.get("/:slug", async (req, res) => {
     if (url) {
       return res.redirect(url.url);
     }
-    return res.status(404).json({ error: "URL not found" });
+    res.status(404).json({ error: "URL not found" });
   } catch (error) {
-    console.error("Error redirecting:", error);
-    return res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Mount router
-app.use("/api", router);
+// Root route handler
+app.get("/", (req, res) => {
+  res.json({
+    message: "URL Shortener API",
+    endpoints: {
+      shorten: "POST /api/shorten",
+      list: "GET /api/urls",
+      redirect: "GET /:slug",
+    },
+  });
+});
+
+// Catch-all route handler
+app.use((req, res) => {
+  res.status(404).json({ error: "Route not found" });
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error("Error:", err);
-  res.status(err.status || 500).json({
+  console.error(err.stack);
+  res.status(500).json({
     error: true,
     message: err.message || "Internal server error",
     stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
@@ -205,5 +149,5 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
