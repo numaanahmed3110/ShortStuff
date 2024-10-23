@@ -14,7 +14,7 @@ function App() {
 
   const fetchUrls = async () => {
     try {
-      const response = await fetch("http://localhost:3001/api/urls");
+      const response = await fetch("https://shawty-server.vercel.app/api/urls");
       if (!response.ok) throw new Error("Failed to fetch URLs");
       const data = await response.json();
       setUrls(data);
@@ -28,13 +28,16 @@ function App() {
 
   const handleShorten = async (newUrl) => {
     try {
-      const response = await fetch("http://localhost:3001/api/shorten", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(newUrl),
-      });
+      const response = await fetch(
+        "https://shawty-server.vercel.app/api/shorten",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(newUrl),
+        }
+      );
       if (!response.ok) throw new Error("Failed to shorten URL");
       const data = await response.json();
       setUrls([data, ...urls]);

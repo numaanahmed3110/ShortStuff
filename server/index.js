@@ -10,22 +10,13 @@ import { nanoid } from "nanoid";
 
 const app = express();
 const router = express.Router();
+app.use("/api", router);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 dotenv.config();
 
-// Middleware
-app.use(helmet());
-app.use(morgan("tiny"));
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(join(__dirname, "public")));
-app.use(express.static(join(__dirname, "build")));
-// Apply API routes
-app.use("/api", router);
 // Database connection
 mongoose
   .connect(process.env.MONGODB_URI)
@@ -34,6 +25,15 @@ mongoose
     console.error("Error connecting to MongoDB:", err.message);
     process.exit(1);
   });
+
+// Middleware
+app.use(helmet());
+app.use(morgan("tiny"));
+app.use(cors("*"));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(join(__dirname, "public")));
+app.use(express.static(join(__dirname, "build")));
 
 // Schema and Model definitions
 const urlSchema = new mongoose.Schema({
@@ -46,56 +46,6 @@ const urlSchema = new mongoose.Schema({
 
 const Url = mongoose.model("Url", urlSchema);
 
-// API Routes
-// router.post("/shorten", async (req, res) => {
-//   console.log("Received POST request to /api/shorten");
-//   console.log("Request body:", req.body);
-//   try {
-//     const { url, slug } = req.body;
-
-//     if (!url) {
-//       return res.status(400).json({ error: "URL is required" });
-//     }
-
-//     let newSlug = slug || nanoid(5);
-//     let attempts = 0;
-//     const maxAttempts = 5;
-
-//     while (attempts < maxAttempts) {
-//       try {
-//         const newUrl = new Url({
-//           url,
-//           slug: newSlug,
-//           clicks: 0,
-//           active: true,
-//         });
-
-//         const saved = await newUrl.save();
-//         return res.json({
-//           slug: saved.slug,
-//           originalUrl: saved.url,
-//           clicks: saved.clicks,
-//           active: saved.active,
-//           createdAt: saved.createdAt,
-//           _id: saved._id,
-//         });
-//       } catch (error) {
-//         if (error.code === 11000) {
-//           // Duplicate key error
-//           newSlug = nanoid(5);
-//           attempts++;
-//         } else {
-//           throw error;
-//         }
-//       }
-//     }
-//     throw new Error("Failed to generate a unique slug after multiple attempts");
-//   } catch (error) {
-//     console.error("Error in /api/shorten:", error);
-//     return res.status(500).json({ error: error.message });
-//   }
-// });
-
 router.post("/shorten", async (req, res, next) => {
   let { slug, url } = req.body;
   console.log("Received POST request to /api/shorten");
@@ -103,10 +53,10 @@ router.post("/shorten", async (req, res, next) => {
 
   try {
     // Validate the slug and url using yup schema
-    await schema.validate({ slug, url });
+    await urlSchema.validate({ slug, url });
 
     // Disallow shortening of internal links
-    if (url.includes("cdg.sh")) {
+    if (url.includes("shawty3110.vercel.app")) {
       throw new Error("Stop it. 🛑");
     }
 

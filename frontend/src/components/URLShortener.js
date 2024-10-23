@@ -9,11 +9,14 @@ const URLShortener = ({ onShorten }) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:3001/api/shorten", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, slug }),
-      });
+      const response = await fetch(
+        "https://shawty-server.vercel.app/api/shorten",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url, slug }),
+        }
+      );
       const data = await response.json();
       onShorten(data);
       setUrl("");
