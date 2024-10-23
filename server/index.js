@@ -35,6 +35,18 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(join(__dirname, "public")));
 app.use(express.static(join(__dirname, "build")));
 
+// Basic CORS configuration with all origins allowed
+const corsOptions = {
+  origin: "*", // Allow all origins
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"], // Allowed methods
+  allowedHeaders: ["Content-Type", "Authorization"], // Allowed headers
+  exposedHeaders: ["Content-Range", "X-Content-Range"], // Headers that can be exposed
+  credentials: true, // Allow credentials (cookies, authorization headers)
+  maxAge: 86400, // How long the results of a preflight request can be cached (in seconds)
+};
+// Apply CORS middleware with options
+app.use(cors(corsOptions));
+
 // Schema and Model definitions
 const urlSchema = new mongoose.Schema({
   slug: { type: String, unique: true, required: true, index: true },
