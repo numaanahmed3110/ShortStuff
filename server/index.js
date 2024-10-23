@@ -10,43 +10,35 @@ import { nanoid } from "nanoid";
 
 const app = express();
 const router = express.Router();
-app.use("/api", router);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 dotenv.config();
 
-// Database connection
-mongoose
-  .connect(process.env.MONGODB_URI)
-  .then(() => console.log("Connected to MongoDB"))
-  .catch((err) => {
-    console.error("Error connecting to MongoDB:", err.message);
-    process.exit(1);
-  });
+// CORS Configuration - Place this BEFORE other middleware
+const corsOptions = {
+  origin: [
+    "https://shawty3110.vercel.app",
+    "http://localhost:3000",
+    "http://localhost:3001",
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+  maxAge: 86400,
+};
 
-// Middleware
+app.use(cors(corsOptions));
+
+// Other middleware
 app.use(helmet());
 app.use(morgan("tiny"));
-app.use(cors("*"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(join(__dirname, "public")));
 app.use(express.static(join(__dirname, "build")));
-
-// Basic CORS configuration with all origins allowed
-const corsOptions = {
-  origin: "*", // Allow all origins
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"], // Allowed methods
-  allowedHeaders: ["Content-Type", "Authorization"], // Allowed headers
-  exposedHeaders: ["Content-Range", "X-Content-Range"], // Headers that can be exposed
-  credentials: true, // Allow credentials (cookies, authorization headers)
-  maxAge: 86400, // How long the results of a preflight request can be cached (in seconds)
-};
-// Apply CORS middleware with options
-app.use(cors(corsOptions));
-
+app.use("/api", router);
 // Schema and Model definitions
 const urlSchema = new mongoose.Schema({
   slug: { type: String, unique: true, required: true, index: true },
