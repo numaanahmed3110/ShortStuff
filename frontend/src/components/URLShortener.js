@@ -1,4 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { AlertCircle, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import dotenv from "dotenv";
+dotenv.config();
+
+const API_BASE_URL = process.env.API_BASE_URL;
 
 const URLShortener = ({ onShorten }) => {
   const [url, setUrl] = useState("");
@@ -12,18 +17,15 @@ const URLShortener = ({ onShorten }) => {
     setError(null);
 
     try {
-      const response = await fetch(
-        "https://shawty-server.vercel.app/api/shorten",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({ url, slug }),
-        }
-      );
+      const response = await fetch(`${API_BASE_URL}/shorten`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ url, slug }),
+      });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -45,8 +47,9 @@ const URLShortener = ({ onShorten }) => {
   return (
     <div className="max-w-4xl mx-auto">
       {error && (
-        <div className="mb-4 p-4 bg-red-900/50 border border-red-500 text-red-200 rounded-lg">
-          {error}
+        <div className="mb-4 p-4 bg-red-900/50 border border-red-500 text-red-200 rounded-lg flex items-center gap-2">
+          <AlertCircle className="h-5 w-5" />
+          <span>{error}</span>
         </div>
       )}
       <form onSubmit={handleSubmit} className="mt-8 mb-4 space-y-4">
@@ -74,13 +77,12 @@ const URLShortener = ({ onShorten }) => {
         <button
           type="submit"
           disabled={loading}
-          className="w-full px-8 py-4 bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-50 rounded-lg transition-colors"
+          className="w-full px-8 py-4 bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-50 rounded-lg transition-colors flex items-center justify-center gap-2"
         >
+          {loading && <Loader2 className="h-5 w-5 animate-spin" />}
           {loading ? "Shortening..." : "Shorten Now!"}
         </button>
       </form>
     </div>
   );
 };
-
-export default URLShortener;

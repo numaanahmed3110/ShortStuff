@@ -117,7 +117,7 @@ router.post("/shorten", async (req, res) => {
       return res.status(400).json({ error: "Invalid URL format" });
     }
 
-    // Generate short slug
+    // Generate short slug if not provided
     if (!slug) {
       slug = nanoid(7);
     }
@@ -126,7 +126,11 @@ router.post("/shorten", async (req, res) => {
     await newUrl.save();
 
     // Return minimal response
-    res.json({ slug: newUrl.slug, url: newUrl.url });
+    res.json({
+      slug: newUrl.slug,
+      url: newUrl.url,
+      shortUrl: `${process.env.BASE_URL}/${newUrl.slug}`,
+    });
   } catch (error) {
     if (error.code === 11000) {
       // Duplicate key error
@@ -143,17 +147,48 @@ router.get("/urls", async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
 
-    const urls = await Url.find()
-      .select("slug url clicks createdAt") // Select only needed fields
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .skip((page - 1) * limit)
-      .lean(); // Convert to plain JS objects
+    const [urls, total] = await Promise.all([
+      Url.find()
+        .select("slug url clicks createdAt") // Select only needed fields
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .skip((page - 1) * limit)
+        .lean(), // Convert to plain JS objects
+      Url.countDocuments(), // Get total count for pagination
+    ]);
 
-    res.json(urls);
+    res.json({
+      urls,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalUrls: total,
+        hasMore: page * limit < total,
+      },
+    });
   } catch (error) {
     console.error("Error fetching URLs:", error);
     res.status(500).json({ error: "Failed to fetch URLs" });
+  }
+});
+
+// Add route to get URL stats
+router.get("/stats/:slug", async (req, res) => {
+  try {
+    const { slug } = req.params;
+
+    const urlDoc = await Url.findOne({ slug })
+      .select("url clicks createdAt active")
+      .lean();
+
+    if (!urlDoc) {
+      return res.status(404).json({ error: "URL not found" });
+    }
+
+    res.json(urlDoc);
+  } catch (error) {
+    console.error("Error getting stats:", error);
+    res.status(500).json({ error: "Failed to get URL stats" });
   }
 });
 
@@ -179,6 +214,7 @@ app.get("/:slug", async (req, res) => {
 
     return res.redirect(301, url.url); // Use permanent redirect
   } catch (error) {
+    console.error("Error redirecting:", error);
     res.status(500).json({ error: "Failed to redirect" });
   }
 });
@@ -190,12 +226,13 @@ app.get("/", (_, res) => {
     endpoints: {
       shorten: "POST /api/shorten",
       list: "GET /api/urls",
+      stats: "GET /api/stats/:slug",
       redirect: "GET /:slug",
     },
   });
 });
 
-// Error handling
+// Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err);
   res.status(500).json({
@@ -204,17 +241,21 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Initialize server
+// Initialize server with database connection check
 const PORT = process.env.PORT || 3001;
 
-// Ensure database connection before starting server
-connectDB()
-  .then(() => {
+const startServer = async () => {
+  try {
+    await connectDB();
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
-  })
-  .catch((err) => {
-    console.error("Failed to start server:", err);
+  } catch (error) {
+    console.error("Failed to start server:", error);
     process.exit(1);
-  });
+  }
+};
+
+startServer();
+
+export default app;
